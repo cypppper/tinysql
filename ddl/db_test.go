@@ -1011,8 +1011,11 @@ func (s *testDBSuite4) TestAddColumn2(c *C) {
 	defer s.dom.DDL().(ddl.DDLForTest).SetHook(originHook)
 	hook := &ddl.TestDDLCallback{}
 	var writeOnlyTable table.Table
+	fmt.Println("ssssssssssssssssssssssssssssssssss")
 	hook.OnJobRunBeforeExported = func(job *model.Job) {
+		fmt.Println("hahahahahahahahahhahahahahahahahahah")
 		if job.SchemaState == model.StateWriteOnly {
+			fmt.Println("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz")
 			writeOnlyTable, _ = s.dom.InfoSchema().TableByID(job.TableID)
 		}
 	}

@@ -445,6 +445,7 @@ func (c *ddlCallback) OnChanged(err error) error {
 	if err != nil {
 		return err
 	}
+	// after synced
 	logutil.BgLogger().Info("performing DDL change, must reload")
 
 	err = c.do.Reload()

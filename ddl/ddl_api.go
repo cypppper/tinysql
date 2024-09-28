@@ -709,6 +709,7 @@ func checkConstraintNames(constraints []*ast.Constraint) error {
 	return nil
 }
 
+// [mgd] [guess] build column info and index info
 func buildTableInfo(ctx sessionctx.Context, d *ddl, tableName model.CIStr, cols []*table.Column, constraints []*ast.Constraint) (tbInfo *model.TableInfo, err error) {
 	tbInfo = &model.TableInfo{
 		Name:    tableName,
@@ -804,7 +805,7 @@ func buildTableInfoWithCheck(ctx sessionctx.Context, d *ddl, s *ast.CreateTableS
 	colObjects := make([]interface{}, 0, len(colDefs))
 	for _, col := range colDefs {
 		colObjects = append(colObjects, col)
-	}
+	} // deep copy of s.Cols
 	if err := checkTooLongTable(ident.Name); err != nil {
 		return nil, errors.Trace(err)
 	}
@@ -848,6 +849,7 @@ func (d *ddl) CreateTable(ctx sessionctx.Context, s *ast.CreateTableStmt) (err e
 	is := d.GetInfoSchemaWithInterceptor(ctx)
 	schema, ok := is.SchemaByName(ident.Schema)
 	if !ok {
+		// [mgd] [guess] infoSchema does NOT find the database/schema?
 		return infoschema.ErrDatabaseNotExists.GenWithStackByArgs(ident.Schema)
 	}
 	if is.TableExists(ident.Schema, ident.Name) {

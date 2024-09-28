@@ -318,6 +318,7 @@ func (w *worker) handleDDLJobQueue(d *ddlCtx) error {
 			}
 
 			var err error
+			// [mgd] [guess] queue type is either "addIndex" or  "defaultJob"
 			t := newMetaWithQueueTp(txn, w.typeStr())
 			// We become the owner. Get the first job and run it.
 			job, err = w.getFirstDDLJob(t)

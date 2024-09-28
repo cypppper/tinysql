@@ -98,7 +98,40 @@ func DecodeRecordKey(key kv.Key) (tableID int64, handle int64, err error) {
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
-	return
+
+	// check valid: length
+	if len(key) != RecordRowKeyLen {
+		return 0, 0, errInvalidRecordKey.GenWithStack("length invalid")
+	}
+	// check valid: table prefix
+	isValid := key.HasPrefix(kv.Key(tablePrefix))
+	if !isValid {
+		return 0, 0, errInvalidRecordKey.GenWithStack("no table prefix")
+	}
+	// clone key
+	decode_bytes := key.Clone()
+
+	// check and do decode table prefix
+	decode_bytes = decode_bytes[1:]
+	decode_bytes, tableID, err = codec.DecodeInt(decode_bytes)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	// check valid: record prefix
+	isValid = decode_bytes.HasPrefix(kv.Key(recordPrefixSep))
+	if !isValid {
+		return 0, 0, errInvalidRecordKey.GenWithStack("no record prefix")
+	}
+
+	// check and do decode prefix
+	decode_bytes = decode_bytes[2:]
+	decode_bytes, recordID, err := codec.DecodeInt(decode_bytes)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	return tableID, recordID, nil
 }
 
 // appendTableIndexPrefix appends table index prefix  "t[tableID]_i".
@@ -148,6 +181,36 @@ func DecodeIndexKeyPrefix(key kv.Key) (tableID int64, indexID int64, indexValues
 	 *   5. understanding the coding rules is a prerequisite for implementing this function,
 	 *      you can learn it in the projection 1-2 course documentation.
 	 */
+
+	// check length
+	if len(key) < prefixLen+idLen {
+		return 0, 0, nil, errInvalidIndexKey.GenWithStack("key length is not enough")
+	}
+	// check table prefix
+	isValid := key.HasPrefix(tablePrefix)
+	if !isValid {
+		return 0, 0, nil, errInvalidIndexKey.GenWithStack("key has no table prefix")
+	}
+	// decode tableid
+	cloneKey := key.Clone()
+	cloneKey = cloneKey[1:]
+	cloneKey, tableID, err = codec.DecodeInt(cloneKey)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	// check indexPrefix valid
+	isValid = cloneKey.HasPrefix(indexPrefixSep)
+	if !isValid {
+		return 0, 0, nil, errInvalidIndexKey.GenWithStack("key has no index prefix")
+	}
+	// decode IndexID
+	cloneKey = cloneKey[2:]
+	cloneKey, indexID, err = codec.DecodeInt(cloneKey)
+	if err != nil {
+		return 0, 0, nil, err
+	}
+	indexValues = []byte(cloneKey)
+
 	return tableID, indexID, indexValues, nil
 }
 
