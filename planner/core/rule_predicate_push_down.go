@@ -366,7 +366,39 @@ func (p *LogicalProjection) PredicatePushDown(predicates []expression.Expression
 // Hints:
 //   1. predicates need to be discussed in two types: expression.Constant and expression.ScalarFunction
 func (la *LogicalAggregation) PredicatePushDown(predicates []expression.Expression) (ret []expression.Expression, retPlan LogicalPlan) {
-	return predicates, la
+	oldExprs := make([]expression.Expression, 0, len(la.AggFuncs))
+	for _, fun := range la.AggFuncs {
+		oldExprs = append(oldExprs, fun.Args[0])
+	}
+	groupByCols := expression.NewSchema(la.GetGroupByCols()...)
+	var condsToPush []expression.Expression
+	for _, cond := range predicates {
+		switch cond.(type) {
+		case *expression.Constant:
+			condsToPush = append(condsToPush, cond)
+			ret = append(ret, cond)
+		case *expression.ScalarFunction:
+			cols := expression.ExtractColumns(cond)
+			flag := true
+			for _, col := range cols {
+				if !groupByCols.Contains(col) {
+					flag = false
+					break
+				}
+			}
+			if flag {
+				newExpr := expression.ColumnSubstitute(cond, la.Schema(), oldExprs)
+				condsToPush = append(condsToPush, newExpr)
+			} else {
+				ret = append(ret, cond)
+			}
+		default:
+			ret = append(ret, cond)
+		}
+
+	}
+	la.baseLogicalPlan.PredicatePushDown(condsToPush)
+	return ret, la
 }
 
 // PredicatePushDown implements LogicalPlan PredicatePushDown interface.
